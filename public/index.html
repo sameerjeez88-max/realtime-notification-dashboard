@@ -1,0 +1,124 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Real-Time Command Dashboard — Rana Yasir Mahy Ud Din</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="/socket.io/socket.io.js"></script>
+</head>
+<body class="bg-slate-950 text-slate-100 min-h-screen flex flex-col justify-between font-sans">
+
+  <!-- Header -->
+  <header class="border-b border-slate-800 bg-slate-900/60 backdrop-blur sticky top-0 z-50">
+    <div class="max-w-6xl mx-auto px-6 py-4 flex justify-between items-center">
+      <div class="flex items-center space-x-3">
+        <div class="bg-indigo-600 text-white font-bold px-3 py-1.5 rounded-xl shadow-lg">RT</div>
+        <span class="text-lg font-bold tracking-wider">Command Center</span>
+      </div>
+      <div class="flex items-center space-x-2">
+        <span class="w-3 h-3 bg-emerald-500 rounded-full animate-pulse"></span>
+        <span class="text-xs text-emerald-400 font-medium">WebSocket Live</span>
+      </div>
+    </div>
+  </header>
+
+  <!-- Main Content -->
+  <main class="max-w-6xl mx-auto px-6 py-10 flex-grow w-full">
+    <div class="flex justify-between items-center mb-8">
+      <div>
+        <h1 class="text-3xl font-extrabold tracking-tight">Real-Time Analytics Dashboard</h1>
+        <p class="text-slate-400 text-sm mt-1">Live event stream powered by Socket.io and Node.js</p>
+      </div>
+      <div class="text-right text-xs text-slate-500">
+        Developer: <span class="text-indigo-400 font-medium">Rana Yasir Mahy Ud Din</span>
+      </div>
+    </div>
+
+    <!-- Stats Grid -->
+    <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-10">
+      <div class="bg-slate-900 border border-slate-800 p-6 rounded-2xl shadow-xl">
+        <p class="text-slate-400 text-xs font-semibold uppercase tracking-wider">Active Users</p>
+        <h3 id="stat-users" class="text-3xl font-black mt-2 text-indigo-400">142</h3>
+      </div>
+      <div class="bg-slate-900 border border-slate-800 p-6 rounded-2xl shadow-xl">
+        <p class="text-slate-400 text-xs font-semibold uppercase tracking-wider">Server Load</p>
+        <h3 id="stat-load" class="text-3xl font-black mt-2 text-emerald-400">18%</h3>
+      </div>
+      <div class="bg-slate-900 border border-slate-800 p-6 rounded-2xl shadow-xl">
+        <p class="text-slate-400 text-xs font-semibold uppercase tracking-wider">Pending Tasks</p>
+        <h3 id="stat-tasks" class="text-3xl font-black mt-2 text-amber-400">7</h3>
+      </div>
+    </div>
+
+    <!-- Live Notification Feed -->
+    <div class="bg-slate-900 border border-slate-800 rounded-2xl p-6 shadow-xl">
+      <div class="flex justify-between items-center mb-6 border-b border-slate-800 pb-4">
+        <h2 class="text-lg font-bold">Live Notification Stream</h2>
+        <span class="text-xs bg-indigo-500/10 text-indigo-400 px-3 py-1 rounded-full font-medium">Auto-updating every 10s</span>
+      </div>
+      <div id="notification-feed" class="space-y-4 max-h-[400px] overflow-y-auto pr-2">
+        <!-- Dynamic Alerts Will Stream Here -->
+      </div>
+    </div>
+  </main>
+
+  <!-- Footer -->
+  <footer class="border-t border-slate-800 bg-slate-900/40 py-6 text-center text-xs text-slate-500">
+    © 2026 Rana Yasir Mahy Ud Din • Real-Time Notification & Dashboard System
+  </footer>
+
+  <!-- Socket.io Listener Script -->
+  <script>
+    const socket = io();
+
+    async function loadInitialData() {
+      try {
+        const res = await fetch('/api/notifications');
+        const json = await res.json();
+        if (json.success) {
+          renderNotifications(json.data);
+        }
+      } catch (err) {
+        console.error('Error loading notifications:', err);
+      }
+    }
+
+    function renderNotifications(items) {
+      const feed = document.getElementById('notification-feed');
+      feed.innerHTML = items.map(n => `
+        <div class="p-4 rounded-xl bg-slate-950/60 border border-slate-800 flex justify-between items-start transition-all hover:border-slate-700">
+          <div>
+            <div class="flex items-center space-x-2 mb-1">
+              <span class="w-2 h-2 rounded-full ${n.type === 'success' ? 'bg-emerald-500' : n.type === 'warning' ? 'bg-amber-500' : 'bg-indigo-500'}"></span>
+              <h4 class="font-bold text-sm">${n.title}</h4>
+            </div>
+            <p class="text-slate-400 text-xs">${n.message}</p>
+          </div>
+          <span class="text-[10px] text-slate-500 bg-slate-900 px-2 py-1 rounded">${n.time}</span>
+        </div>
+      `).join('');
+    }
+
+    // Listen for real-time broadcast from server
+    socket.on('live-notification', (newAlert) => {
+      const feed = document.getElementById('notification-feed');
+      const alertEl = document.createElement('div');
+      alertEl.className = 'p-4 rounded-xl bg-slate-950/60 border border-indigo-500/50 flex justify-between items-start transition-all animate-pulse';
+      alertEl.innerHTML = `
+        <div>
+          <div class="flex items-center space-x-2 mb-1">
+            <span class="w-2 h-2 rounded-full ${newAlert.type === 'success' ? 'bg-emerald-500' : newAlert.type === 'warning' ? 'bg-amber-500' : 'bg-indigo-500'}"></span>
+            <h4 class="font-bold text-sm text-indigo-300">${newAlert.title} (LIVE)</h4>
+          </div>
+          <p class="text-slate-300 text-xs">${newAlert.message}</p>
+        </div>
+        <span class="text-[10px] text-indigo-400 bg-indigo-500/10 px-2 py-1 rounded">${newAlert.time}</span>
+      `;
+      feed.prepend(alertEl);
+    });
+
+    loadInitialData();
+  </script>
+</body>
+</html>
